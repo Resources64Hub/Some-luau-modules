@@ -6,6 +6,7 @@ local SCREEN_GUI = nil
 local OVERLAY = nil
 local BLUR = nil
 local UI_OPEN = true
+local NOTIF_CONTAINER = nil
 local WINDOWS = {}
 
 -- Настройки размера по умолчанию
@@ -44,6 +45,18 @@ function ZeptoUI:Init(name)
 
 		BLUR = Instance.new("BlurEffect", game:GetService("Lighting"))
 		BLUR.Size = 10
+		NOTIF_CONTAINER = Instance.new("Frame")
+		NOTIF_CONTAINER.Name = "Notifications"
+		NOTIF_CONTAINER.Size = UDim2.new(0, 280, 1, -20)
+		NOTIF_CONTAINER.Position = UDim2.new(1, -290, 0, 10)
+		NOTIF_CONTAINER.BackgroundTransparency = 1
+		NOTIF_CONTAINER.ZIndex = 100 -- Всегда поверх окон
+		NOTIF_CONTAINER.Parent = SCREEN_GUI
+
+		local NotifLayout = Instance.new("UIListLayout", NOTIF_CONTAINER)
+		NotifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+		NotifLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		NotifLayout.Padding = UDim.new(0, 8)
 	end
 	return SCREEN_GUI
 end
@@ -85,6 +98,61 @@ local function makeDraggable(frame, handle)
 	end)
 end
 
+function ZeptoUI:Notify(title, text, duration)
+	if not SCREEN_GUI then self:Init() end
+	duration = duration or 5
+
+	local Notif = Instance.new("Frame")
+	Notif.Size = UDim2.new(1, 0, 0, 0) -- Начинаем с нулевой высоты для анимации
+	Notif.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	Notif.BorderSizePixel = 0
+	Notif.ClipsDescendants = true
+	Notif.Parent = NOTIF_CONTAINER
+
+	-- Полоска сбоку (Акцентная)
+	local SideBar = Instance.new("Frame")
+	SideBar.Size = UDim2.new(0, 4, 1, 0)
+	SideBar.BackgroundColor3 = CONFIG.AccentColor
+	SideBar.BorderSizePixel = 0
+	SideBar.Parent = Notif
+
+	local Tlabel = Instance.new("TextLabel")
+	Tlabel.Size = UDim2.new(1, -15, 0, 25)
+	Tlabel.Position = UDim2.new(0, 12, 0, 5)
+	Tlabel.Text = title:upper()
+	Tlabel.Font = Enum.Font.GothamBold
+	Tlabel.TextColor3 = Color3.new(1, 1, 1)
+	Tlabel.TextSize = 14
+	Tlabel.TextXAlignment = Enum.TextXAlignment.Left
+	Tlabel.BackgroundTransparency = 1
+	Tlabel.Parent = Notif
+
+	local Dlabel = Instance.new("TextLabel")
+	Dlabel.Size = UDim2.new(1, -15, 0, 0)
+	Dlabel.Position = UDim2.new(0, 12, 0, 28)
+	Dlabel.AutomaticSize = Enum.AutomaticSize.Y
+	Dlabel.Text = text
+	Dlabel.Font = Enum.Font.Gotham
+	Dlabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+	Dlabel.TextSize = 13
+	Dlabel.TextXAlignment = Enum.TextXAlignment.Left
+	Dlabel.TextWrapped = true
+	Dlabel.BackgroundTransparency = 1
+	Dlabel.Parent = Notif
+
+	-- Анимация появления
+	TweenService:Create(Notif, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, 65)}):Play()
+
+	-- Удаление по таймеру
+	task.delay(duration, function()
+		local out = TweenService:Create(Notif, TweenInfo.new(0.4), {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1})
+		out:Play()
+		out.Completed:Connect(function()
+			Notif:Destroy()
+		end)
+	end)
+end
+
 function ZeptoUI:CreateWindow(title, position)
 	if not SCREEN_GUI then self:Init() end
 
@@ -116,6 +184,21 @@ function ZeptoUI:CreateWindow(title, position)
 	Container.BackgroundTransparency = 1
 	Container.ZIndex = 10
 	Container.Parent = MainFrame
+	
+	local Line = Instance.new("Frame")
+	Line.Size = UDim2.new(1, 0, 0, 2)
+	Line.Position = UDim2.new(0, 0, 1, 0)
+	Line.BackgroundColor3 = CONFIG.AccentColor -- Тот самый синий/оранжевый
+	Line.BorderSizePixel = 0
+	Line.ZIndex = 12
+	Line.Parent = Header
+
+	-- Добавим UIStroke для четкости (если еще не добавил)
+	local Stroke = Instance.new("UIStroke")
+	Stroke.Thickness = 1
+	Stroke.Color = Color3.fromRGB(45, 45, 45)
+	Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	Stroke.Parent = MainFrame
 
 	local Layout = Instance.new("UIListLayout", Container)
 	Layout.SortOrder = Enum.SortOrder.LayoutOrder
